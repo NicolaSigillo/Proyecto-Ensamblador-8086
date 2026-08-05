@@ -1,0 +1,323 @@
+; PROYECTO ENSAMBLADOR 
+; Integrantes: Veronica Betancourt, Sara Rojas, Gabriela Vasquez y Nicola Sigillo
+
+
+.MODEL SMALL
+.STACK 100H
+
+.DATA
+    ; DATOS INICIALES
+    N DW 7  ; de 0 a 7
+
+    A DW 1, 0, 0, 0, 0, 0, 0, 0
+      DW 2, 2, 0, 0, 0, 0, 0, 0
+      DW 3, 3, 3, 0, 0, 0, 0, 0
+      DW 4, 4, 4, 4, 0, 0, 0, 0
+      DW 5, 5, 5, 5, 5, 0, 0, 0
+      DW 6, 6, 6, 6, 6, 6, 0, 0  ; 
+      DW 7, 7, 7, 7, 7, 7, 7, 0
+      DW 8, 8, 8, 8, 8, 8, 8, 8
+
+    B DW 0, 0, 0, 0, 0, 0, 0, 0
+      DW 0, 0, 0, 0, 0, 0, 0, 0
+      DW 0, 0, 0, 0, 0, 0, 0, 0
+      DW 0, 0, 0, 0, 0, 0, 0, 0
+      DW 0, 0, 0, 0, 0, 0, 0, 0
+      DW 0, 0, 0, 0, 0, 0, 0, 0
+      DW 0, 0, 0, 0, 0, 0, 0, 0
+      DW 0, 0, 0, 0, 0, 0, 0, 0
+
+    ; MENSAJES EN PANTALLA
+    MsgB     DB 13, 10, '             B ', 13, 10, '$'
+    MsgAB    DB 13, 10, '            A + B', 13, 10, '$'
+    MsgATB   DB 13, 10, '      A + B (traspuesto) ', 13, 10, '$'
+    MsgPausa DB 13, 10, '<Pulse cualquier Tecla para continuar>', 13, 10, '$'
+    MsgFin   DB 13, 10, 'Fin del programa.', 13, 10, '$'
+    
+    Espacio DB '  ', '$' ; paara dejar espacios entre los numeros
+    NuevaL  DB 13, 10, 13, 10, '$' ;para imprimir en una nueva linea (con espacio de por medio)
+
+.CODE
+MAIN PROC
+    MOV AX, @DATA
+    MOV DS, AX
+
+    
+    ; Cargamos N en el registro BP y le sumamos 1.
+    ; Usaremos BP en lugar de N para los ciclos y multiplicaciones.
+    MOV BP, N
+    INC BP
+
+    ; CALCULO MATRIZ B = -1 * TRASPUESTA(A)
+    ; B[i, j] = -A[j,i]
+    MOV CX, BP     
+    XOR BX, BX
+
+L_FILA_B:
+    PUSH CX
+    MOV CX, BP      
+    XOR DI, DI
+
+L_COL_B:
+    ; Calculamos A[j, i] = (j * (N+1) + i) * 2 (columnas)
+    MOV AX, DI
+    MUL BP          
+    ADD AX, BX
+    SHL AX, 1
+    MOV SI, AX
+
+    ; Calcular su valor negativo
+    MOV AX, A[SI]
+    NEG AX
+
+    ; Calculamos B[i, j] = (i * (N+1) + j) * 2 (filas)
+    PUSH AX
+    MOV AX, BX
+    MUL BP          
+    ADD AX, DI
+    SHL AX, 1
+    MOV SI, AX
+    POP AX
+
+    ; Guardamos en B
+    MOV B[SI], AX
+
+    INC DI
+    LOOP L_COL_B
+
+    POP CX
+    INC BX
+    LOOP L_FILA_B
+
+
+
+    ; IMPRIMIR MATRIZ B 
+    LEA DX, MsgB
+    MOV AH, 09H
+    INT 21H
+    
+    LEA DX, NuevaL  
+    MOV AH, 09H
+    INT 21H
+
+    MOV SI, 0       
+    MOV CX, BP      
+IMP_FILA_B:
+    PUSH CX
+    MOV CX, BP      
+IMP_COL_B:
+    MOV AX, B[SI]
+    CALL PRINT_NUM
+    LEA DX, Espacio
+    MOV AH, 09H
+    INT 21H
+    ADD SI, 2
+    LOOP IMP_COL_B
+
+    LEA DX, NuevaL  
+    MOV AH, 09H
+    INT 21H
+
+    POP CX
+    LOOP IMP_FILA_B
+
+    CALL PAUSA
+
+
+
+    
+    ; IMPRIMIR MATRIZ A + B 
+    LEA DX, MsgAB
+    MOV AH, 09H
+    INT 21H
+
+    LEA DX, NuevaL  
+    MOV AH, 09H
+    INT 21H
+
+    MOV SI, 0       
+    MOV CX, BP      
+
+IMP_FILA_AB:
+    PUSH CX
+    MOV CX, BP      
+
+IMP_COL_AB:
+    MOV AX, A[SI]
+    ADD AX, B[SI]   ; Suma A + B
+    CALL PRINT_NUM
+    LEA DX, Espacio
+    MOV AH, 09H
+    INT 21H
+    ADD SI, 2
+    LOOP IMP_COL_AB
+
+    LEA DX, NuevaL
+    MOV AH, 09H
+    INT 21H
+
+    POP CX
+    LOOP IMP_FILA_AB
+
+    CALL PAUSA
+
+    
+    
+
+    ; IMPRIMIR MATRIZ A + TRASPUESTA(B)
+    ; A[i, j] + B[j, i]          
+    LEA DX, MsgATB
+    MOV AH, 09H
+    INT 21H
+
+    LEA DX, NuevaL  
+    MOV AH, 09H
+    INT 21H
+
+    MOV CX, BP      
+    XOR BX, BX      
+
+IMP_FILA_ATB:
+    PUSH CX
+    MOV CX, BP      
+    XOR DI, DI      
+
+IMP_COL_ATB:
+    ; A[i, j] = (i * (N+1) + j) * 2
+    MOV AX, BX
+    MUL BP          
+    ADD AX, DI
+    SHL AX, 1
+    MOV SI, AX      
+    MOV DX, A[SI]   
+
+
+    ; B[j, i] = (j * (N+1) + i) * 2
+    PUSH DX         ; Guardamos A[i, j] 
+    MOV AX, DI
+    MUL BP          
+    ADD AX, BX
+    SHL AX, 1
+    MOV SI, AX
+    POP DX          ; Recuperamos A[i, j] 
+    ADD DX, B[SI]   ; DX = A[i, j] + B[j, i]
+
+    MOV AX, DX
+    CALL PRINT_NUM
+    
+    LEA DX, Espacio
+    MOV AH, 09H
+    INT 21H
+
+    INC DI          
+    LOOP IMP_COL_ATB
+
+    LEA DX, NuevaL
+    MOV AH, 09H
+    INT 21H
+
+    POP CX
+    INC BX          
+    LOOP IMP_FILA_ATB
+
+
+
+    
+    ; CIERRE DEL PROGRAMA
+    LEA DX, MsgFin
+    MOV AH, 09H
+    INT 21H
+
+    LEA DX, NuevaL  
+    MOV AH, 09H
+    INT 21H
+
+    MOV AH, 07H
+    INT 21H
+
+    MOV AH, 4CH
+    INT 21H
+MAIN ENDP
+
+
+
+
+
+; SUBRUTINA: PRINT_NUM
+PRINT_NUM PROC
+    PUSH AX
+    PUSH BX
+    PUSH CX
+    PUSH DX
+
+    OR AX, AX
+    JNS POSITIVO
+    
+    ; Si el número es negativo, imprime -
+    PUSH AX
+    MOV AH, 02H
+    MOV DL, '-'
+    INT 21H
+    POP AX
+    NEG AX     
+    JMP INICIAR_DIV     
+
+POSITIVO:
+    PUSH AX
+    MOV AH, 02H
+    MOV DL, ' ' ; espacio de alineación
+    INT 21H
+    POP AX
+
+INICIAR_DIV:
+    XOR CX, CX      
+    MOV BX, 10      
+
+DIVIDIR:
+    XOR DX, DX
+    DIV BX
+    PUSH DX         
+    INC CX
+    OR AX, AX
+    JNZ DIVIDIR
+
+IMPRIMIR:
+    POP DX
+    ADD DL, '0'     
+    MOV AH, 02H
+    INT 21H
+    LOOP IMPRIMIR
+
+    POP DX
+    POP CX
+    POP BX
+    POP AX
+    RET
+PRINT_NUM ENDP
+
+
+
+
+
+; SUBRUTINA: PAUSA
+PAUSA PROC
+    PUSH AX
+    PUSH DX
+    
+    LEA DX, MsgPausa
+    MOV AH, 09H
+    INT 21H
+
+    LEA DX, NuevaL  
+    MOV AH, 09H
+    INT 21H
+    
+    MOV AH, 07H     
+    INT 21H
+    
+    POP DX
+    POP AX
+    RET
+PAUSA ENDP
+
+END MAIN
